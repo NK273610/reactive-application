@@ -1,6 +1,7 @@
 package com.rogers.java.reactiveapplication.config;
 
 import com.rogers.java.reactiveapplication.jwt.JwtToken;
+import com.rogers.java.reactiveapplication.security.AuthServerSecurityContextRepository;
 import com.rogers.java.reactiveapplication.security.AuthnWebTokenFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -18,13 +19,14 @@ public class SecurityConfig {
   @Bean
   public SecurityWebFilterChain securityWebFilterChain(final ServerHttpSecurity http) {
     return http
+        .securityContextRepository(new AuthServerSecurityContextRepository())
         .logout().disable()
         .csrf().disable()
         .authorizeExchange()
         .anyExchange().authenticated()
         .and()
         .addFilterAt(
-            new AuthnWebTokenFilter(jwtToken),
+            new AuthnWebTokenFilter(jwtToken, new AuthServerSecurityContextRepository()),
             SecurityWebFiltersOrder.AUTHENTICATION
         )
         .build();

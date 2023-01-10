@@ -5,12 +5,15 @@ import com.rogers.java.reactiveapplication.jwt.JwtToken;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
 
 
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class AuthnWebTokenFilter implements WebFilter {
 
 
   private final JwtToken jwtToken;
+  private final AuthServerSecurityContextRepository securityContextRepository;
 
 
   @Override
@@ -28,11 +32,18 @@ public class AuthnWebTokenFilter implements WebFilter {
     final String token = parseToken(authorization);
     if (StringUtils.hasText(token)) {
       return jwtToken.verify(token)
+          .flatMap(claims -> securityContextRepository.save(exchange, toSecurityContext(token)))
           .then(chain.filter(exchange));
     }
     return chain.filter(exchange);
   }
 
+  private SecurityContext toSecurityContext(String token) {
+    final SecurityContext securityContext = new SecurityContextImpl();
+    final var authentication = new AuthenticationToken(token, true);
+    securityContext.setAuthentication(authentication);
+    return securityContext;
+  }
 
   private String parseToken(final String authorization) {
     if (!StringUtils.hasText(authorization)) {
